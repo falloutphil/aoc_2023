@@ -6,6 +6,8 @@
 ;; Add 'common' to the load-path
 (add-to-list 'load-path aoc-common-dir)
 
+(defvar input-file (expand-file-name "input.txt" (file-name-directory (or load-file-name (buffer-file-name)))))
+
 ;; Ensure the file-utils are loaded
 (require 'file-utils)
 
@@ -20,10 +22,8 @@
   "Calculate the sum of calibration values from the file at FILE-PATH."
   (apply '+ (mapcar 'extract-calibration-value (read-lines file-path))))
 
-(defun day-01-part-01 (&optional input-file)
+(defun day-01-part-01 ()
   "Part 1"
-  (let ((input-path (or input-file
-                        (expand-file-name "input.txt" (file-name-directory (or load-file-name (buffer-file-name)))))))
-    (message "The sum of all calibration values is: %s" (sum-calibration-values input-path))))
+  (message "The sum of all calibration values is: %s" (sum-calibration-values input-file)))
 
 (day-01-part-01)
