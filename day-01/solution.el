@@ -8,8 +8,9 @@
 
 (defvar input-file (expand-file-name "input.txt" (file-name-directory (or load-file-name (buffer-file-name)))))
 
-;; Ensure the file-utils are loaded
+
 (require 'file-utils)
+(require 'result-utils)
 (require 'ert)
 
 (defvar str2num
@@ -36,13 +37,11 @@
 
 (defun day-01-part-01 (lines)
   "Part 1"
-  (message "The sum of all calibration values is: %s"
-           (sum-calibration-values 'extract-calibration-value lines)))
+  (sum-calibration-values 'extract-calibration-value lines))
 
 (defun day-01-part-02 (lines)
   "Part 2"
-  (message "The sum of all calibration values is: %s"
-           (sum-calibration-values (lambda (line) (extract-calibration-value (replace-words line))) lines)))
+  (sum-calibration-values (lambda (line) (extract-calibration-value (replace-words line))) lines))
 
 (defvar part-01-test-data
   '("1abc2"
@@ -68,10 +67,11 @@
   (should (= (sum-calibration-values
               (lambda (line) (extract-calibration-value (replace-words line))) part-02-test-data) 281)))
 
+;; Running the functions and displaying the results
+(let ((lines (read-lines input-file)))
+  (display-results (list (day-01-part-01 lines) (day-01-part-02 lines))
+                   '("Part 01 - The sum of all calibration values is"
+                     "Part 02 - The sum of all calibration values is")))
+
 ;; Run tests
 (ert-run-tests-interactively "day-01-tests")
-
-;; If tests pass run the real thing!
-(let ((lines (read-lines input-file)))
-  (day-01-part-01 lines)
-  (day-01-part-02 lines))
