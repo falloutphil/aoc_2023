@@ -10,6 +10,7 @@
 
 ;; Ensure the file-utils are loaded
 (require 'file-utils)
+(require 'ert)
 
 (defvar str2num
   '(("one" . "o1e") ("two" . "t2o") ("three" . "t3e") ("four" . "f4r")
@@ -29,19 +30,48 @@
       (string-to-number (concat (list (car digits) (car (last digits)))))
       (string-to-number (concat (list (car digits) (car digits)))))))
 
-(defun sum-calibration-values (extractor file-path)
+(defun sum-calibration-values (extractor data-as-line-list)
   "Calculate the sum of calibration values from the file at FILE-PATH."
-  (apply '+ (mapcar extractor (read-lines file-path))))
+  (apply '+ (mapcar extractor data-as-line-list)))
 
-(defun day-01-part-01 ()
+(defun day-01-part-01 (lines)
   "Part 1"
   (message "The sum of all calibration values is: %s"
-           (sum-calibration-values 'extract-calibration-value input-file)))
+           (sum-calibration-values 'extract-calibration-value lines)))
 
-(defun day-01-part-02 ()
+(defun day-01-part-02 (lines)
   "Part 2"
   (message "The sum of all calibration values is: %s"
-           (sum-calibration-values (lambda (line) (extract-calibration-value (replace-words line))) input-file)))
+           (sum-calibration-values (lambda (line) (extract-calibration-value (replace-words line))) lines)))
 
-(day-01-part-01)
-(day-01-part-02)
+(defvar part-01-test-data
+  '("1abc2"
+    "pqr3stu8vwx"
+    "a1b2c3d4e5f"
+    "treb7uchet")
+  "List of provided test strings for part 1.")
+
+(defvar part-02-test-data
+  '("two1nine"
+    "eightwothree"
+    "abcone2threexyz"
+    "xtwone3four"
+    "4nineeightseven2"
+    "zoneight234"
+    "7pqrstsixteen")
+  "List of proviuded test strings with mixed words and numbers for part 2.")
+
+;; Define a test for the `add-two` function
+(ert-deftest day-01-tests ()
+  (should (= (sum-calibration-values
+              'extract-calibration-value part-01-test-data) 142))
+  (should (= (sum-calibration-values
+              (lambda (line) (extract-calibration-value (replace-words line))) part-02-test-data) 281)))
+
+;; Run tests
+(ert-run-tests-interactively "day-01-tests")
+
+;; If tests pass run the real thing!
+(let ((lines (read-lines input-file)))
+  (day-01-part-01 lines)
+  (day-01-part-02 lines))
