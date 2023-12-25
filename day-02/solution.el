@@ -14,6 +14,7 @@
 (require 'ert)
 
 ;; Parse a single set of cubes (e.g., "3 blue, 4 red")
+;; to ((3 . "blue"), (4 . "red"))
 (defun parse-set (set)
   (let ((parts (split-string set ", ")))
     (mapcar (lambda (part)
@@ -22,6 +23,9 @@
             parts)))
 
 ;; Parse game data from a single line
+;; Assoc of Game ID to list of sets of cubes - represented by inner assoc of rgb
+;; ((1 . (((3. "blue"), (4 . "red")) ((2 . "green"))))
+;;  (2 . ......))
 (defun parse-game (line)
   (when (string-match "Game \\([0-9]+\\): \\(.*\\)" line)
     (let ((id (string-to-number (match-string 1 line)))
@@ -31,8 +35,8 @@
 ;; Check if a game is possible with given cube counts
 (defun is-game-possible (game red-count green-count blue-count)
   (let ((possible t))
-    (dolist (set (cdr game) possible)
-      (dolist (pair set)
+    (dolist (set (cdr game) possible)   ; loop each game set, return possible
+      (dolist (pair set)        ; loop each colour in set as pair
         (cond ((eq (car pair) 'red) (setq possible (and possible (<= (cdr pair) red-count))))
               ((eq (car pair) 'green) (setq possible (and possible (<= (cdr pair) green-count))))
               ((eq (car pair) 'blue) (setq possible (and possible (<= (cdr pair) blue-count)))))))
@@ -45,6 +49,10 @@
       (when (is-game-possible game red-count green-count blue-count)
         (setq sum (+ sum (car game)))))))
 
+(defun day-02-part-01 (lines r g b)
+  "Part 1"
+  (let ((parsed-games (mapcar 'parse-game lines)))
+    (process-games parsed-games r g b)))
 
 (defvar day-02-test-data
   '("Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green"
@@ -54,9 +62,6 @@
     "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green")
   "List of provided test strings for day 02.")
 
-(defvar expected-sum-possible-ids 8
-  "Expected sum of IDs of possible games with 12 red, 13 green, and 14 blue cubes.")
-
 ;; Define the test
 (ert-deftest day-02-tests ()
   (let ((parsed-games (mapcar 'parse-game day-02-test-data))
@@ -64,7 +69,15 @@
         (green-cubes 13)
         (blue-cubes 14))
     (should (= (process-games parsed-games red-cubes green-cubes blue-cubes)
-               expected-sum-possible-ids))))
+               8))))
+
+;; Running the functions and displaying the results
+(let ((lines (read-lines input-file))
+      (red-cubes 12)
+      (green-cubes 13)
+      (blue-cubes 14))
+  (display-results (list (day-02-part-01 lines red-cubes green-cubes blue-cubes))
+                   '("Part 01 - The sum of the IDs")))
 
 ;; Running the test
 (ert-run-tests-interactively "day-02-tests")
