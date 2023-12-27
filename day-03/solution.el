@@ -28,7 +28,7 @@
                         (let ((cell (nth (+ x dx) (nth (+ y dy) schematic))))
                           ;;(message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
                                    ;;(nth x (nth y schematic)) x y dx dy cell)
-                          (when (string-match-p "[*#+$]" cell)
+                          (when (string-match-p "[^0-9.]" cell) ; not a digit or full-stop
                             (throw 'found-symbol t)))))) ; throw to exit immediately when a symbol is found
     nil)) ; return nil if no symbol is found after all iterations
 
