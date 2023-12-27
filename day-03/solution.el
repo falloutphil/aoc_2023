@@ -14,75 +14,61 @@
 (require 'cl-lib)
 
 (defun parse-schematic (line)
-  "Parse a single line of the schematic into a list of characters."
-  (split-string line "" t))
+  "Parse a single line of the schematic into a vector of characters."
+  (vconcat (split-string line "" t)))
 
 (defun is-adjacent-to-symbol? (x y schematic)
   "Check if the position (x, y) is adjacent to any symbol."
-  (catch 'found-symbol ; use catch to allow an immediate exit from nested loops
+  (catch 'found-symbol
     (cl-loop for dx from -1 to 1 do
              (cl-loop for dy from -1 to 1 do
-                      (when (and (not (and (= dx 0) (= dy 0))) ; Exclude the center cell
-                                 (>= (+ x dx) 0) (>= (+ y dy) 0) ; Ensure indices are within bounds
-                                 (< (+ x dx) (length (nth 0 schematic))) ; x + dx less than schematic width
-                                 (< (+ y dy) (length schematic))) ; y + dy less than schematic height
-                        (let ((cell (nth (+ x dx) (nth (+ y dy) schematic))))
-                          ;;(message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
-                                   ;;(nth x (nth y schematic)) x y dx dy cell)
-                          (when (string-match-p "[^0-9.]" cell) ; not a digit or full-stop
-                            (throw 'found-symbol t)))))) ; throw to return t immediately when a symbol is found
-    nil)) ; return nil if no symbol is found after all iterations
-
+                      (when (and (not (and (= dx 0) (= dy 0)))
+                                 (>= (+ x dx) 0) (>= (+ y dy) 0)
+                                 (< (+ x dx) (length schematic))
+                                 (< (+ y dy) (length (aref schematic 0))))
+                        (let ((cell (aref (aref schematic (+ y dy)) (+ x dx))))
+                          (when (string-match-p "[^0-9.]" cell)
+                            (throw 'found-symbol t))))))
+    nil))
 
 (defun sum-part-numbers (schematic)
   "Calculate the sum of all part numbers in the schematic."
   (let ((sum 0))
-    ;; Loop through each cell in the schematic.
     (cl-loop for y from 0 below (length schematic) do
-             (cl-loop for x from 0 below (length (nth y schematic)) do
-                      (let ((cell (nth x (nth y schematic))))
-                        ;; Check if the cell is a digit.
+             (cl-loop for x from 0 below (length (aref schematic y)) do
+                      (let ((cell (aref (aref schematic y) x)))
                         (when (string-match-p "[0-9]" cell)
-                          ;; Find the whole number this digit is a part of.
                           (let ((end x)
                                 (number-string cell))
-                            ;; Extend the number to the right.
-                            (while (and (< (+ end 1) (length (nth y schematic)))
-                                        (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic))))
+                            (while (and (< (+ end 1) (length (aref schematic y)))
+                                        (string-match-p "[0-9]" (aref (aref schematic y) (+ end 1))))
                               (cl-incf end)
-                              (setq number-string (concat number-string (nth end (nth y schematic)))))
-                            ;; Check each part of the number for adjacency to a symbol.
-                            ;; Early exit on finding symbol into body of the when.
-                            (when (cl-loop for i from x to end
-                                           thereis (is-adjacent-to-symbol? i y schematic))
-                              ;; If any part of the number is adjacent to a symbol, add to sum.
+                              (setq number-string (concat number-string (aref (aref schematic y) end))))
+                            (when (cl-loop for i from x to end thereis (is-adjacent-to-symbol? i y schematic))
                               (cl-incf sum (string-to-number number-string)))
-                            ;; Skip past the end of the current number.
                             (setq x end))))))
     sum))
 
-
 (defvar day-03-test-data
-  '("467..114.."
-    "...*......"
-    "..35..633."
-    "......#..."
-    "617*......"
-    ".....+.58."
-    "..592....."
-    "......755."
-    "...$.*...."
-    ".664.598..")
+  (vector
+   (parse-schematic "467..114..")
+   (parse-schematic "...*......")
+   (parse-schematic "..35..633.")
+   (parse-schematic "......#...")
+   (parse-schematic "617*......")
+   (parse-schematic ".....+.58.")
+   (parse-schematic "..592.....")
+   (parse-schematic "......755.")
+   (parse-schematic "...$.*....")
+   (parse-schematic ".664.598.."))
   "Example schematic for day 3.")
 
 (ert-deftest day-03-tests ()
-  (let ((test-schematic (mapcar 'parse-schematic
-                                day-03-test-data)))
-    (should (= (sum-part-numbers test-schematic) 4361))))
+  (should (= (sum-part-numbers day-03-test-data) 4361)))
 
 (defun day-03-part-01 (lines)
   "Calculate the sum of part numbers for Day 3, Part 1."
-  (sum-part-numbers (mapcar 'parse-schematic lines)))
+  (sum-part-numbers (vconcat (mapcar 'parse-schematic lines))))
 
 (let ((lines (read-lines day-03-input-file)))
   (display-results (list (day-03-part-01 lines))
