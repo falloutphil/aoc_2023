@@ -1,6 +1,16 @@
 ;;; solution.el --- Day 3 Advent of Code Solution
 
+;; Calculate the absolute path to the 'common' directory
+(defvar aoc-root-dir (file-name-directory (directory-file-name (file-name-directory (or load-file-name buffer-file-name)))))
+(defvar aoc-common-dir (expand-file-name "common" aoc-root-dir))
+;; Add 'common' to the load-path
+(add-to-list 'load-path aoc-common-dir)
+
 (defvar day-03-input-file (expand-file-name "input.txt" (file-name-directory (or load-file-name buffer-file-name))))
+
+(require 'file-utils)
+(require 'result-utils)
+(require 'ert)
 
 (defun parse-schematic (line)
   "Parse a single line of the schematic into a list of characters."
@@ -16,8 +26,8 @@
                                  (< (+ x dx) (length (nth 0 schematic))) ; x + dx less than schematic width
                                  (< (+ y dy) (length schematic))) ; y + dy less than schematic height
                         (let ((cell (nth (+ x dx) (nth (+ y dy) schematic))))
-                          (message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
-                                   (nth x (nth y schematic)) x y dx dy cell)
+                          ;;(message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
+                                   ;;(nth x (nth y schematic)) x y dx dy cell)
                           (when (string-match-p "[*#+$]" cell)
                             (throw 'found-symbol t)))))) ; throw to exit immediately when a symbol is found
     nil)) ; return nil if no symbol is found after all iterations
@@ -31,7 +41,7 @@
                       (let ((cell (nth x (nth y schematic))))
                         ;; Check if the cell is a digit.
                         (when (string-match-p "[0-9]" cell)
-                          (message "DEBUG: matched on cell %s" cell)
+                          ;;(message "DEBUG: matched on cell %s" cell)
                           ;; Find the whole number this digit is a part of.
                           (let ((end x)
                                 (number-string cell)
@@ -41,16 +51,16 @@
                                         (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic)))) ; next cell is number
                               (setq end (1+ end)) ; move end marker
                               (setq number-string (concat number-string (nth end (nth y schematic))))) ; concat digit
-                            (message "DEBUG: number-string  %s" number-string)
+                            ;;(message "DEBUG: number-string  %s" number-string)
                             ;; Check each part of the number for adjacency to a symbol.
                             (cl-loop for i from x to end do
                                      (when (is-adjacent-to-symbol? i y schematic)
                                        (setq adjacent-to-symbol t)))
-                            (message "DEBUG: adjacent-to-symbol  %s" adjacent-to-symbol)
+                            ;;(message "DEBUG: adjacent-to-symbol  %s" adjacent-to-symbol)
                             ;; If any part of the number is adjacent to a symbol, add to sum.
                             (when adjacent-to-symbol
                               (setq sum (+ sum (string-to-number number-string))))
-                            (message "DEBUG: sum  %d" sum)
+                            ;;(message "DEBUG: sum  %d" sum)
                             ;; Skip past the end of the current number.
                             (setq x end))))))
     sum))
@@ -75,10 +85,7 @@
 
 (defun day-03-part-01 ()
   "Calculate the sum of part numbers for Day 3, Part 1."
-  (let ((lines (with-temp-buffer
-                 (insert-file-contents day-03-input-file)
-                 (split-string (buffer-string) "\n" t))))
-    (sum-part-numbers (mapcar 'parse-schematic lines))))
+  (sum-part-numbers (mapcar 'parse-schematic (read-lines day-03-input-file))))
 
 (let ((result (day-03-part-01)))
   (message "Part 01 - The sum of the part numbers: %s" result))
