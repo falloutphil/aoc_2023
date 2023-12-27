@@ -11,6 +11,7 @@
 (require 'file-utils)
 (require 'result-utils)
 (require 'ert)
+(require 'cl-lib)
 
 (defun parse-schematic (line)
   "Parse a single line of the schematic into a list of characters."
@@ -48,14 +49,14 @@
                             ;; Extend the number to the right.
                             (while (and (< (+ end 1) (length (nth y schematic)))
                                         (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic))))
-                              (setq end (1+ end))
+                              (cl-incf end)
                               (setq number-string (concat number-string (nth end (nth y schematic)))))
                             ;; Check each part of the number for adjacency to a symbol.
                             ;; Early exit on finding symbol into body of the when.
                             (when (cl-loop for i from x to end
                                            thereis (is-adjacent-to-symbol? i y schematic))
                               ;; If any part of the number is adjacent to a symbol, add to sum.
-                              (setq sum (+ sum (string-to-number number-string))))
+                              (cl-incf sum (string-to-number number-string)))
                             ;; Skip past the end of the current number.
                             (setq x end))))))
     sum))
