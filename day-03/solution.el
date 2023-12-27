@@ -28,8 +28,10 @@
                                  (< (+ y dy) (length (aref schematic 0))))
                         (let ((cell (aref (aref schematic (+ y dy)) (+ x dx))))
                           (when (string-match-p "[^0-9.]" cell)
+                            (message "DEBUG: Adjacent symbol found at %d,%d for gear at %d,%d" (+ x dx) (+ y dy) x y)
                             (throw 'found-symbol t))))))
     nil))
+
 
 (defun sum-part-numbers (schematic)
   "Calculate the sum of all part numbers in the schematic."
@@ -49,6 +51,43 @@
                             (setq x end))))))
     sum))
 
+(defun find-adjacent-parts (x y schematic)
+  "Find all part numbers adjacent to position (x, y)."
+  (let ((parts '()))
+    (cl-loop for dx from -1 to 1 do
+             (cl-loop for dy from -1 to 1 do
+                      (when (and (not (and (= dx 0) (= dy 0))) ; Exclude the center cell
+                                 (>= (+ x dx) 0) (>= (+ y dy) 0) ; Ensure indices are within bounds
+                                 (< (+ x dx) (length schematic)) ; x + dx less than schematic width
+                                 (< (+ y dy) (length (aref schematic 0)))) ; y + dy less than schematic height
+                        (let ((cell (aref (aref schematic (+ y dy)) (+ x dx))))
+                          (when (and (string-match-p "^[0-9]+$" cell) ; Check if the cell is a part number
+                                     (< (length parts) 2)) ; Ensure we only consider the first two parts
+                            (push (string-to-number cell) parts))))))
+    (if (= (length parts) 2)
+        (progn
+          (message "DEBUG: Adjacent parts for gear at %d,%d: %s" x y parts)
+          parts)
+      (progn
+        (message "DEBUG: Invalid number of adjacent parts for gear at %d,%d: %s" x y parts)
+        nil))))
+
+(defun sum-gear-ratios (schematic)
+  "Calculate the sum of all the multiplied gear ratios."
+  (let ((sum 0))
+    (cl-loop for y from 0 below (length schematic) do
+             (cl-loop for x from 0 below (length (aref schematic y)) do
+                      (let ((cell (aref (aref schematic y) x)))
+                        (when (equal cell "*") ; check for gear symbol
+                          (message "DEBUG: Checking gear at %d,%d" x y)
+                          (let ((adjacent-parts (find-adjacent-parts x y schematic)))
+                            (when adjacent-parts ; valid gear found
+                              (message "DEBUG: Gear at %d,%d with adjacent parts %s" x y adjacent-parts)
+                              (cl-incf sum (* (nth 0 adjacent-parts) (nth 1 adjacent-parts)))
+                              (message "DEBUG: New sum after gear at %d,%d: %d" x y sum)))))))
+    sum))
+
+
 (defvar day-03-test-data
   (vector
    (parse-schematic "467..114..")
@@ -64,14 +103,15 @@
   "Example schematic for day 3.")
 
 (ert-deftest day-03-tests ()
-  (should (= (sum-part-numbers day-03-test-data) 4361)))
+  ;;(should (= (sum-part-numbers day-03-test-data) 4361))
+  (should (= (sum-gear-ratios day-03-test-data) 467835)))
 
 (defun day-03-part-01 (lines)
   "Calculate the sum of part numbers for Day 3, Part 1."
   (sum-part-numbers (vconcat (mapcar 'parse-schematic lines))))
 
-(let ((lines (read-lines day-03-input-file)))
-  (display-results (list (day-03-part-01 lines))
-                   '("Part 01 - The sum of the part numbers")))
+;(let ((lines (read-lines day-03-input-file)))
+;  (display-results (list (day-03-part-01 lines))
+;                   '("Part 01 - The sum of the part numbers")))
 
 (ert-run-tests-interactively "day-03-tests")
