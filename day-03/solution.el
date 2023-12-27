@@ -29,8 +29,9 @@
                           ;;(message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
                                    ;;(nth x (nth y schematic)) x y dx dy cell)
                           (when (string-match-p "[^0-9.]" cell) ; not a digit or full-stop
-                            (throw 'found-symbol t)))))) ; throw to exit immediately when a symbol is found
+                            (throw 'found-symbol t)))))) ; throw to return t immediately when a symbol is found
     nil)) ; return nil if no symbol is found after all iterations
+
 
 (defun sum-part-numbers (schematic)
   "Calculate the sum of all part numbers in the schematic."
@@ -41,29 +42,24 @@
                       (let ((cell (nth x (nth y schematic))))
                         ;; Check if the cell is a digit.
                         (when (string-match-p "[0-9]" cell)
-                          ;;(message "DEBUG: matched on cell %s" cell)
                           ;; Find the whole number this digit is a part of.
                           (let ((end x)
-                                (number-string cell)
-                                (adjacent-to-symbol nil))
+                                (number-string cell))
                             ;; Extend the number to the right.
-                            (while (and (< (+ end 1) (length (nth y schematic))) ; less than schematic width
-                                        (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic)))) ; next cell is number
-                              (setq end (1+ end)) ; move end marker
-                              (setq number-string (concat number-string (nth end (nth y schematic))))) ; concat digit
-                            ;;(message "DEBUG: number-string  %s" number-string)
+                            (while (and (< (+ end 1) (length (nth y schematic)))
+                                        (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic))))
+                              (setq end (1+ end))
+                              (setq number-string (concat number-string (nth end (nth y schematic)))))
                             ;; Check each part of the number for adjacency to a symbol.
-                            (cl-loop for i from x to end do
-                                     (when (is-adjacent-to-symbol? i y schematic)
-                                       (setq adjacent-to-symbol t)))
-                            ;;(message "DEBUG: adjacent-to-symbol  %s" adjacent-to-symbol)
-                            ;; If any part of the number is adjacent to a symbol, add to sum.
-                            (when adjacent-to-symbol
+                            ;; Early exit on finding symbol into body of the when.
+                            (when (cl-loop for i from x to end
+                                           thereis (is-adjacent-to-symbol? i y schematic))
+                              ;; If any part of the number is adjacent to a symbol, add to sum.
                               (setq sum (+ sum (string-to-number number-string))))
-                            ;;(message "DEBUG: sum  %d" sum)
                             ;; Skip past the end of the current number.
                             (setq x end))))))
     sum))
+
 
 (defvar day-03-test-data
   '("467..114.."
