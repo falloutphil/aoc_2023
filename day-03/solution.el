@@ -83,14 +83,12 @@
                                 day-03-test-data)))
     (should (= (sum-part-numbers test-schematic) 4361))))
 
-(defun day-03-part-01 ()
+(defun day-03-part-01 (lines)
   "Calculate the sum of part numbers for Day 3, Part 1."
-  (sum-part-numbers (mapcar 'parse-schematic (read-lines day-03-input-file))))
+  (sum-part-numbers (mapcar 'parse-schematic lines)))
 
-(let ((result (day-03-part-01)))
-  (message "Part 01 - The sum of the part numbers: %s" result))
+(let ((lines (read-lines day-03-input-file)))
+  (display-results (list (day-03-part-01 lines))
+                   '("Part 01 - The sum of the part numbers")))
 
-;;(setq debug-on-entry nil)
-;;(ert-run-tests-interactively "day-03-tests")
-
-;; 410973 is too low
+(ert-run-tests-interactively "day-03-tests")
