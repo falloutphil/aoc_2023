@@ -8,21 +8,52 @@
 
 (defun is-adjacent-to-symbol? (x y schematic)
   "Check if the position (x, y) is adjacent to any symbol."
-  (cl-loop for dx from -1 to 1
-           for dy from -1 to 1
-           when (and (not (and (= dx 0) (= dy 0))) ; Exclude the center cell
-                     (>= (+ x dx) 0) (>= (+ y dy) 0) ; Ensure indices are within bounds
-                     (< (+ x dx) (length schematic)) (< (+ y dy) (length (nth 0 schematic))))
-           thereis (let ((cell (nth (+ y dy) (nth (+ x dx) schematic))))
-                     (string-match-p "[*#+$]" cell))))
+  (catch 'found-symbol ; use catch to allow an immediate exit from nested loops
+    (cl-loop for dx from -1 to 1 do
+             (cl-loop for dy from -1 to 1 do
+                      (when (and (not (and (= dx 0) (= dy 0))) ; Exclude the center cell
+                                 (>= (+ x dx) 0) (>= (+ y dy) 0) ; Ensure indices are within bounds
+                                 (< (+ x dx) (length (nth 0 schematic))) ; x + dx less than schematic width
+                                 (< (+ y dy) (length schematic))) ; y + dy less than schematic height
+                        (let ((cell (nth (+ x dx) (nth (+ y dy) schematic))))
+                          (message "DEBUG: Digit %s at %d,%d, neighbour %d,%d a symbol?  %s"
+                                   (nth x (nth y schematic)) x y dx dy cell)
+                          (when (string-match-p "[*#+$]" cell)
+                            (throw 'found-symbol t)))))) ; throw to exit immediately when a symbol is found
+    nil)) ; return nil if no symbol is found after all iterations
 
 (defun sum-part-numbers (schematic)
   "Calculate the sum of all part numbers in the schematic."
-  (cl-loop for y from 0 below (length schematic)
-           sum (cl-loop for x from 0 below (length (nth y schematic))
-                        when (and (is-adjacent-to-symbol? x y schematic)
-                                  (string-match-p "[0-9]+" (nth x (nth y schematic))))
-                        sum (string-to-number (nth x (nth y schematic))))))
+  (let ((sum 0))
+    ;; Loop through each cell in the schematic.
+    (cl-loop for y from 0 below (length schematic) do
+             (cl-loop for x from 0 below (length (nth y schematic)) do
+                      (let ((cell (nth x (nth y schematic))))
+                        ;; Check if the cell is a digit.
+                        (when (string-match-p "[0-9]" cell)
+                          (message "DEBUG: matched on cell %s" cell)
+                          ;; Find the whole number this digit is a part of.
+                          (let ((end x)
+                                (number-string cell)
+                                (adjacent-to-symbol nil))
+                            ;; Extend the number to the right.
+                            (while (and (< (+ end 1) (length (nth y schematic))) ; less than schematic width
+                                        (string-match-p "[0-9]" (nth (+ end 1) (nth y schematic)))) ; next cell is number
+                              (setq end (1+ end)) ; move end marker
+                              (setq number-string (concat number-string (nth end (nth y schematic))))) ; concat digit
+                            (message "DEBUG: number-string  %s" number-string)
+                            ;; Check each part of the number for adjacency to a symbol.
+                            (cl-loop for i from x to end do
+                                     (when (is-adjacent-to-symbol? i y schematic)
+                                       (setq adjacent-to-symbol t)))
+                            (message "DEBUG: adjacent-to-symbol  %s" adjacent-to-symbol)
+                            ;; If any part of the number is adjacent to a symbol, add to sum.
+                            (when adjacent-to-symbol
+                              (setq sum (+ sum (string-to-number number-string))))
+                            (message "DEBUG: sum  %d" sum)
+                            ;; Skip past the end of the current number.
+                            (setq x end))))))
+    sum))
 
 (defvar day-03-test-data
   '("467..114.."
@@ -52,4 +83,7 @@
 (let ((result (day-03-part-01)))
   (message "Part 01 - The sum of the part numbers: %s" result))
 
-(ert-run-tests-interactively "day-03-tests")
+;;(setq debug-on-entry nil)
+;;(ert-run-tests-interactively "day-03-tests")
+
+;; 410973 is too low
