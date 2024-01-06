@@ -53,8 +53,8 @@
 
 ;; part 2
 
-(defun find-full-number (x y schematic dx dy)
-  "Find the full number starting from position (x, y) and extending in direction (dx, dy)."
+(defun find-full-number (x y schematic)
+  "Find the full number starting from position (x, y)"
   (let ((cell (aref (aref schematic y) x))
         (start x)
         (end x)
@@ -69,9 +69,10 @@
                 (string-match-p "[0-9]" (aref (aref schematic y) (+ end 1))))
       (cl-incf end)
       (setq number-string (concat number-string (aref (aref schematic y) end))))
-    (if (> (+ end (- start)) 0) ; If the number is more than one digit
-        (string-to-number number-string)
-      nil)))
+    ;(if (> (+ end (- start)) 0) ; If the number is more than one digit
+    ;    (string-to-number number-string)
+    ;  nil)
+    (string-to-number number-string)))
 
 (defun find-adjacent-parts (x y schematic)
   "Find all part numbers adjacent to position (x, y)."
@@ -84,15 +85,20 @@
                                  (< (+ y dy) (length (aref schematic 0)))) ; y + dy less than schematic height
                         (let* ((adj-x (+ x dx))
                                (adj-y (+ y dy))
-                               (cell (aref (aref schematic adj-y) adj-x)))
+                               (cell (aref (aref schematic adj-y) adj-x))
+                               (foo (message "parts: %s, cell: %s" parts cell)))
                           (when (and (string-match-p "^[0-9]" cell) ; Check if the cell starts with a digit
                                      (< (length parts) 2)) ; Ensure we only consider the first two parts
-                            (let ((full-number (find-full-number adj-x adj-y schematic dx dy)))
+                            (message "length: %d" (length parts))
+                            (let ((full-number (find-full-number adj-x adj-y schematic)))
                               (when (and full-number (not (member full-number parts)))
                                 (push full-number parts))))))))
+    (message "both parts: %s" parts)
     (if (= (length parts) 2)
         parts
-      nil)))
+      (progn
+        ;(message "DEBUG: %s has %d parts" parts (length parts))
+        nil))))
 
 (defun sum-gear-ratios (schematic)
   "Calculate the sum of all the multiplied gear ratios."
@@ -101,12 +107,14 @@
              (cl-loop for x from 0 below (length (aref schematic y)) do
                       (let ((cell (aref (aref schematic y) x)))
                         (when (equal cell "*") ; check for gear symbol
-                          (message "DEBUG: Checking gear at %d,%d" x y)
+                          ;(message "DEBUG: Checking gear at %d,%d" x y)
                           (let ((adjacent-parts (find-adjacent-parts x y schematic)))
                             (when adjacent-parts ; valid gear found
-                              (message "DEBUG: Gear at %d,%d with adjacent parts %s" x y adjacent-parts)
+                              ;(message "DEBUG: Gear at %d,%d with adjacent parts %s" x y adjacent-parts)
+                              (message "Adjacent Part Sum: %d" (* (nth 0 adjacent-parts) (nth 1 adjacent-parts)))
                               (cl-incf sum (* (nth 0 adjacent-parts) (nth 1 adjacent-parts)))
-                              (message "DEBUG: New sum after gear at %d,%d: %d" x y sum)))))))
+                              ;(message "DEBUG: New sum after gear at %d,%d: %d" x y sum)
+                              ))))))
     sum))
 
 
@@ -134,15 +142,18 @@
 
 (defun day-03-part-02 (lines)
   "Calculate the sum of gear ratios for Day 3, Part 2."
-  (sum-gear-ratios (vconcat (mapcar 'parse-schematic lines))))
+  (message "Sum gear ratios: %d" (sum-gear-ratios (vconcat (mapcar 'parse-schematic lines)))))
 
 
-(let ((lines (read-lines day-03-input-file)))
-  (display-results (list (day-03-part-01 lines) (day-03-part-02 lines))
-                   '("Part 01 - The sum of the part numbers"
-                     "Part 02 - The sum of the gear ratios")))
+;(let ((lines (read-lines day-03-input-file)))
+;  (display-results (list ;(day-03-part-01 lines)
+;                         (day-03-part-02 lines))
+;                   '(;"Part 01 - The sum of the part numbers"
+;                     "Part 02 - The sum of the gear ratios")))
 
-(ert-run-tests-interactively "day-03-tests")
+(day-03-part-02 (read-lines day-03-input-file))
+
+;(ert-run-tests-interactively "day-03-tests")
 
 ;; unit test passes for part 02, but full schematic is too low:
 ;; 77493351
