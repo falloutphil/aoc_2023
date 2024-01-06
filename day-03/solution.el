@@ -133,7 +133,7 @@
 
 (defun day-03-part-02 (lines)
   "Calculate the sum of gear ratios for Day 3, Part 2."
-  (message "Sum gear ratios: %d" (sum-gear-ratios (vconcat (mapcar 'parse-schematic lines)))))
+  (sum-gear-ratios (vconcat (mapcar 'parse-schematic lines))))
 
 
 (let ((lines (read-lines day-03-input-file)))
