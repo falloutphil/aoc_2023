@@ -27,22 +27,20 @@
     `((card . ,card-number) (winning . ,winning-numbers) (your . ,your-numbers))))
 
 
-(defun sum-scratchcard-points (cards)
-  "Sum the points of all scratchcards."
-  (let ((total-points 0))
-    (dolist (card cards total-points)
-      (let* ((winning (alist-get 'winning card))
-             (your (alist-get 'your card))
-             (matches (cl-intersection winning your :test 'equal)))
-        (when matches  ; Only calculate if there are any matches
-          (cl-incf total-points (lsh 1 (1- (length matches)))))))))
-
-
 (defun count-matches (card)
   "Count the number of matches for a given card."
   (let ((winning (alist-get 'winning card))
         (your (alist-get 'your card)))
     (length (cl-intersection winning your :test 'equal))))
+
+
+(defun sum-scratchcard-points (cards)
+  "Sum the points of all scratchcards."
+  (let ((total-points 0))
+    (dolist (card cards total-points)
+      (let ((matches (count-matches card)))
+        (when matches  ; Only calculate if there are any matches
+          (cl-incf total-points (lsh 1 (1- matches))))))))
 
 
 (defun count-total-scratchcards-inefficient (cards)
