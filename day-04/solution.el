@@ -45,6 +45,7 @@
 
 (defun count-total-scratchcards-inefficient (cards)
   "Count the total number of scratchcards after processing all originals and copies."
+  ;; This simple but cascades exponentially and would take forever to complete
   (let ((total-cards 0)  ; Counter for total cards.
         (to-process (copy-sequence cards)))  ; Queue to hold cards to process.
     (while to-process
@@ -57,22 +58,41 @@
               (setq to-process (append to-process (list (nth next-index cards)))))))))  ; Add copies to the end of the queue.
     total-cards))  ; Return the total count of cards processed.
 
+
 (defun count-total-scratchcards (cards)
   "Count the total number of scratchcards after processing all originals and copies."
-  (let* ((total-cards (length cards))  ; Total number of different cards.
-         (card-counts (make-vector total-cards 1))  ; Count of each card, initially 1 each.
-         (processed (make-vector total-cards nil)))  ; Track whether a card has been processed.
-    (dotimes (i total-cards)
-      (unless (aref processed i)  ; Only process unprocessed cards.
-        (aset processed i t)  ; Mark the card as processed.
-        (let* ((card (nth i cards))
-               (matches (count-matches card))
-               (copies (aref card-counts i)))  ; How many of this card do we have?
-          (dotimes (j matches)
-            (let ((next-index (+ (alist-get 'card card) j)))
-              (when (< next-index total-cards)
-                (cl-incf (aref card-counts next-index) copies)))))))  ; Add copies to subsequent cards.
-    (apply '+ (append card-counts nil))))  ; Sum the counts of all cards.
+  ;; The function works because each card can only win copies of cards that come after it, not before it.
+  ;; This is a crucial aspect of how the problem is structured and why the function is effective:
+  ;; Sequential Nature: Each card can only affect the counts of subsequent cards.
+  ;;    This sequential nature means you don't have to revisit earlier cards;
+  ;;    their counts won't change based on the results of later cards.
+  ;; No Backward Updates: Because a card can't win copies of cards that come before it,
+  ;;    there's no need for the function to loop back and re-process earlier cards.
+  ;;    Once a card's count has been updated, it's final and won't be changed by any future processing.
+  ;; Forward Cascade: When a card wins copies of subsequent cards, those cards might, in turn,
+  ;;    win copies of cards that come even later. This creates a forward cascading effect.
+  ;;    As the function progresses through the cards, it's continually updating the state
+  ;;    based on these cascades, but only ever moving forward.
+  ;; Efficient Processing: This forward-only cascade allows the function to process each card
+  ;;    exactly once but still account for the complex, cumulative effect of cards winning other cards.
+  ;;    It's an efficient way to handle the problem, avoiding the need for multiple passes or complex backtracking.
+  (let* ((total-cards (length cards))  ; Counter for total cards.
+         (card-counts (make-vector total-cards 1)))  ; Count of each card, initially 1 each.
+    (dotimes (i total-cards)    ; loop over each card exactly once
+      (let* ((card (nth i cards))       ; get the card in question
+             (matches (count-matches card))     ; find its matches
+             (copies (aref card-counts i)))  ; How many of this card do we have? (at this point all cascades are complete)
+        (dotimes (j matches)    ; each match gives us a new relative index from the ith card, loop over these
+          (let ((next-index (+ (alist-get 'card card) j)))      ; convert relative to absolute index
+            (when (< next-index total-cards)  ; Ensure the index is in bounds
+              ;; This is subtle - because we know each card will create the same copies
+              ;; we can add that number of copies of the ith index to each of the next indices.
+              ;; This is because we know each count of the ith card will trigger
+              ;; a modified count of all its *forward cascading* winning indices -
+              ;; we won't process the modified copies in the outer ith loop until
+              ;; we, by design of the problem, having processed all it's contributing parents.
+              (cl-incf (aref card-counts next-index) copies))))))  ; Add copies to subsequent cards.
+    (apply '+ (append card-counts nil))))  ; Sum the counts of all cards... append converts vector to list to use apply
 
 
 (defvar day-04-test-data
