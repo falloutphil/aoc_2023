@@ -20,15 +20,15 @@
     (dolist (line lines)
       (cond
        ;; Handle seed lines by converting numbers to a list of integers.
-       ((string-match "^seeds: \\(.+\\)" line)
+       ((string-match "^seeds: \\([0-9 ]+\\)$" line)
         (push (cons 'seeds (mapcar 'string-to-number (split-string (match-string 1 line) " "))) maps))
 
        ;; Update the current map identifier when a new map is encountered.
-       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:" line)  ; no change in depth
+       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)  ; no change in depth
         (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
 
        ;; Update mapping for the current map type.
-       ((string-match "\\([0-9]+\\) \\([0-9]+\\) \\([0-9]+\\)" line)
+       ((string-match "^\\([0-9]+\\) \\([0-9]+\\) \\([0-9]+\\)$" line)
         (let* ((dest-start (string-to-number (match-string 1 line)))
                (src-start (string-to-number (match-string 2 line)))
                (length (string-to-number (match-string 3 line)))
