@@ -24,7 +24,7 @@
         (push (cons 'seeds (mapcar 'string-to-number (split-string (match-string 1 line) " "))) maps))
 
        ;; Update the current map identifier when a new map is encountered.
-       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)  ; no change in depth
+       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)
         (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
 
        ;; Update mapping for the current map type.
