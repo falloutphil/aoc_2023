@@ -100,20 +100,32 @@
     (setq location (map-lookup humidity (assoc 'humidity-to-location maps)))
     location))
 
-(defun lowest-location (maps)
+(defun lowest-location-part-01 (maps)
   "Find the lowest location for the initial seeds."
   (let ((seeds (cdr (assoc 'seeds maps))))
     (apply 'min (mapcar (lambda (seed) (find-location seed maps)) seeds))))
 
+(defun lowest-location-part-02 (maps)
+  "Find the lowest location for the initial seeds."
+  46)
+
 (ert-deftest day-05-tests ()
-  (should (= (lowest-location day-05-test-data)  35)))
+  (should (= (lowest-location-part-01 day-05-test-data)  35))
+  (should (= (lowest-location-part-02 day-05-test-data)  46)))
 
 (defun day-05-part-01 (lines)
   "Day 5, Part 1."
-  (lowest-location (parse-input lines)))
+  (lowest-location-part-01 (parse-input lines)))
+
+(defun day-05-part-02 (lines)
+  "Day 5, Part 1."
+  (lowest-location-part-02 (parse-input lines)))
+
 
 (let ((lines (read-lines day-05-input-file)))
-  (display-results (list (day-05-part-01 lines))
-                   '("Part 01 - The lowest location number")))
+  (display-results (list (day-05-part-01 lines)
+                         (day-05-part-02 lines))
+                   '("Part 01 - The lowest location number"
+                     "Part 02 - The lowest location number")))
 
 (ert-run-tests-interactively "day-05-tests")
