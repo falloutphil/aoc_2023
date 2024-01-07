@@ -13,6 +13,9 @@
 (require 'ert)
 (require 'cl-lib)
 
+;; maps: ((seed-to-soil ((52 50 48) (50 98 2))))  --- realistically would have seeds in here too
+;; existing-maps: (seed-to-soil ((52 50 48) (50 98 2)))
+;; existing-ranges: ((52 50 48) (50 98 2))
 (defun parse-input (lines)
   "Parse the entire input into a structured format."
   (let ((current-map nil)
@@ -23,7 +26,7 @@
        ((string-match "^seeds: \\([0-9 ]+\\)$" line)
         (push (cons 'seeds (mapcar 'string-to-number (split-string (match-string 1 line) " "))) maps))
 
-       ;; Update the current map identifier when a new map is encountered.
+       ;; Update the current map identifier when a new map is encountered, with a symbol.
        ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)
         (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
 
@@ -32,17 +35,17 @@
         (let* ((dest-start (string-to-number (match-string 1 line)))
                (src-start (string-to-number (match-string 2 line)))
                (length (string-to-number (match-string 3 line)))
-               (existing-maps (assoc current-map maps))
-               (existing-ranges (cdr existing-maps)))
+               (existing-maps (assoc current-map maps)))
           (if existing-maps
-              ;; If mapping exists, append the new range to existing ranges.
-              (setcdr existing-maps (append (cdr existing-maps) (list (list dest-start src-start length))))
+              ;; Prepend the new range to the existing ranges.
+              (push (list dest-start src-start length) (cdr existing-maps))
             ;; Else, create a new mapping entry.
             (push (cons current-map (list (list dest-start src-start length))) maps))))
 
        ;; Ignore lines that don't match the expected patterns.
        (t nil)))
-    (reverse maps)))
+    maps))
+
 
 (defvar day-05-test-data
   (parse-input
@@ -81,40 +84,41 @@
       "56 93 4"))
   "Example schematic for day 5.")
 
-(defun map-lookup (value mapping)
+
+(defun map-lookup (candidate mapping)
   "Find the corresponding value in the mapping or return the same value if not found."
-  (let ((found (cl-find-if (lambda (range)
-                             (and (<= (nth 1 range) value)
-                                  (> (+ (nth 1 range) (nth 2 range)) value)))
-                           (cdr mapping))))
+  (let ((found (cl-find-if (lambda (range)      ; range is of the form (destination source length)
+                             (and (<= (nth 1 range) candidate)  ; source lower bound <= candidate
+                                  (> (+ (nth 1 range) (nth 2 range)) candidate)))       ; source+length > candidate
+                           (cdr mapping))))     ; list of all the ranges to test until first match
     (if found
-        (+ (nth 0 found) (- value (nth 1 found)))
-      value)))
+        ;; find how far candidate is into source and add that to destination start
+        ;; to find the mapped values in the destination.
+        (+ (nth 0 found) (- candidate (nth 1 found)))
+      candidate)))      ; if not found spec is to return the original candidate
+
 
 (defun find-location (seed maps)
   "Find the location corresponding to the given seed."
-  (let ((soil (map-lookup seed (assoc 'seed-to-soil maps)))
-        (fertilizer)
-        (water)
-        (light)
-        (temperature)
-        (humidity)
-        (location))
-    (setq fertilizer (map-lookup soil (assoc 'soil-to-fertilizer maps)))
-    (setq water (map-lookup fertilizer (assoc 'fertilizer-to-water maps)))
-    (setq light (map-lookup water (assoc 'water-to-light maps)))
-    (setq temperature (map-lookup light (assoc 'light-to-temperature maps)))
-    (setq humidity (map-lookup temperature (assoc 'temperature-to-humidity maps)))
-    (setq location (map-lookup humidity (assoc 'humidity-to-location maps)))
+  (let* ((soil (map-lookup seed (assoc 'seed-to-soil maps)))    ; find soil types from input seeds
+         (fertilizer (map-lookup soil (assoc 'soil-to-fertilizer maps)))        ; find fertilizer from soil result
+         (water (map-lookup fertilizer (assoc 'fertilizer-to-water maps)))      ; and so on....
+         (light (map-lookup water (assoc 'water-to-light maps)))
+         (temperature (map-lookup light (assoc 'light-to-temperature maps)))
+         (humidity (map-lookup temperature (assoc 'temperature-to-humidity maps)))
+         (location (map-lookup humidity (assoc 'humidity-to-location maps))))
     location))
 
 (defun lowest-location-part-01 (maps)
   "Find the lowest location for the initial seeds."
   (let ((seeds (cdr (assoc 'seeds maps))))
+    ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed maps)) seeds))))
+
 
 (defun lowest-location-part-02 (maps)
   "Find the lowest location for the initial seeds."
+  ;; TODO
   46)
 
 (ert-deftest day-05-tests ()
