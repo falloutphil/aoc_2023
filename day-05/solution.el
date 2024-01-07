@@ -19,10 +19,15 @@
         (maps ()))
     (dolist (line lines)
       (cond
+       ;; Handle seed lines by converting numbers to a list of integers.
        ((string-match "^seeds: \\(.+\\)" line)
-        (setq maps (cons (cons 'seeds (mapcar 'string-to-number (split-string (match-string 1 line) " "))) maps)))
-       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:" line)
+        (push (cons 'seeds (mapcar 'string-to-number (split-string (match-string 1 line) " "))) maps))
+
+       ;; Update the current map identifier when a new map is encountered.
+       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:" line)  ; no change in depth
         (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
+
+       ;; Update mapping for the current map type.
        ((string-match "\\([0-9]+\\) \\([0-9]+\\) \\([0-9]+\\)" line)
         (let* ((dest-start (string-to-number (match-string 1 line)))
                (src-start (string-to-number (match-string 2 line)))
@@ -30,11 +35,14 @@
                (existing-maps (assoc current-map maps))
                (existing-ranges (cdr existing-maps)))
           (if existing-maps
-              (setcdr existing-maps (append existing-ranges (list (list dest-start src-start length))))
-            (setq maps (cons (cons current-map (list (list dest-start src-start length))) maps)))))
+              ;; If mapping exists, append the new range to existing ranges.
+              (setcdr existing-maps (append (cdr existing-maps) (list (list dest-start src-start length))))
+            ;; Else, create a new mapping entry.
+            (push (cons current-map (list (list dest-start src-start length))) maps))))
+
+       ;; Ignore lines that don't match the expected patterns.
        (t nil)))
     (reverse maps)))
-
 
 (defvar day-05-test-data
   (parse-input
