@@ -84,11 +84,20 @@
   (cl-loop for (start length) on pairs by 'cddr
            append (number-sequence start (+ start length -1))))
 
-(defun number-sequence (start end)
+(defun number-sequence-recursive (start end)
   "Generate a sequence of numbers from START to END inclusive."
   (if (> start end)
       nil
-    (cons start (number-sequence (1+ start) end))))
+    (cons start (number-sequence-recursive (1+ start) end))))
+
+(defun number-sequence (start end)
+  "Generate a sequence of numbers from START to END inclusive."
+  (let ((nums '()))
+    (while (<= start end)
+      (push start nums)
+      (cl-incf start))
+    nums))
+
 
 (defun day-05-test-data (parser)
   (funcall parser
