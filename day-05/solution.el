@@ -167,7 +167,7 @@
   (lowest-location (parse-input-values lines)))
 
 (defun day-05-part-02 (lines)
-  "Day 5, Part 1."
+  "Day 5, Part 2."
   (lowest-location (parse-input-ranges lines)))
 
 
