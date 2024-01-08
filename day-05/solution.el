@@ -16,7 +16,7 @@
 ;; maps: ((seed-to-soil ((52 50 48) (50 98 2))))  --- realistically would have seeds in here too
 ;; existing-maps: (seed-to-soil ((52 50 48) (50 98 2)))
 ;; existing-ranges: ((52 50 48) (50 98 2))
-(defun parse-input (lines)
+(defun parse-input-values (lines)
   "Parse the entire input into a structured format."
   (let ((current-map nil)
         (maps ()))
@@ -47,8 +47,51 @@
     maps))
 
 
-(defvar day-05-test-data
-  (parse-input
+(defun parse-input-ranges (lines)
+  "Parse the input lines and expand seed ranges."
+  (let ((current-map nil)
+        (maps ()))
+    (dolist (line lines)
+      (cond
+       ;; Expand seed ranges into individual numbers.
+       ((string-match "^seeds: \\([0-9 ]+\\)$" line)
+        (let* ((range-pairs (mapcar 'string-to-number (split-string (match-string 1 line) " ")))
+               (expanded-seeds (expand-seed-ranges range-pairs)))
+          (push (cons 'seeds expanded-seeds) maps)))
+
+       ;; Update the current map identifier when a new map is encountered, with a symbol.
+       ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)
+        (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
+
+       ;; Update mapping for the current map type.
+       ((string-match "^\\([0-9]+\\) \\([0-9]+\\) \\([0-9]+\\)$" line)
+        (let* ((dest-start (string-to-number (match-string 1 line)))
+               (src-start (string-to-number (match-string 2 line)))
+               (length (string-to-number (match-string 3 line)))
+               (existing-maps (assoc current-map maps)))
+          (if existing-maps
+              ;; Prepend the new range to the existing ranges.
+              (push (list dest-start src-start length) (cdr existing-maps))
+            ;; Else, create a new mapping entry.
+            (push (cons current-map (list (list dest-start src-start length))) maps))))
+
+       ;; Ignore lines that don't match the expected patterns.
+       (t nil)))
+    maps))
+
+(defun expand-seed-ranges (pairs)
+  "Expand the pairs of seed range start and length into individual seeds."
+  (cl-loop for (start length) on pairs by 'cddr
+           append (number-sequence start (+ start length -1))))
+
+(defun number-sequence (start end)
+  "Generate a sequence of numbers from START to END inclusive."
+  (if (> start end)
+      nil
+    (cons start (number-sequence (1+ start) end))))
+
+(defun day-05-test-data (parser)
+  (funcall parser
     '("seeds: 79 14 55 13"
       ""
       "seed-to-soil map:"
@@ -81,8 +124,7 @@
       ""
       "humidity-to-location map:"
       "60 56 37"
-      "56 93 4"))
-  "Example schematic for day 5.")
+      "56 93 4")))
 
 
 (defun map-lookup (candidate mapping)
@@ -109,29 +151,24 @@
          (location (map-lookup humidity (assoc 'humidity-to-location maps))))
     location))
 
-(defun lowest-location-part-01 (maps)
+(defun lowest-location (maps)
   "Find the lowest location for the initial seeds."
   (let ((seeds (cdr (assoc 'seeds maps))))
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed maps)) seeds))))
 
 
-(defun lowest-location-part-02 (maps)
-  "Find the lowest location for the initial seeds."
-  ;; TODO
-  46)
-
 (ert-deftest day-05-tests ()
-  (should (= (lowest-location-part-01 day-05-test-data)  35))
-  (should (= (lowest-location-part-02 day-05-test-data)  46)))
+  (should (= (lowest-location (day-05-test-data 'parse-input-values))  35))
+  (should (= (lowest-location (day-05-test-data 'parse-input-ranges))  46)))
 
 (defun day-05-part-01 (lines)
   "Day 5, Part 1."
-  (lowest-location-part-01 (parse-input lines)))
+  (lowest-location (parse-input-values lines)))
 
 (defun day-05-part-02 (lines)
   "Day 5, Part 1."
-  (lowest-location-part-02 (parse-input lines)))
+  (lowest-location (parse-input-ranges lines)))
 
 
 (let ((lines (read-lines day-05-input-file)))
