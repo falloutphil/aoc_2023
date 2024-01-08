@@ -48,16 +48,14 @@
 
 
 (defun parse-input-ranges (lines)
-  "Parse the input lines and expand seed ranges."
+  "Parse the input lines and store seed ranges."
   (let ((current-map nil)
         (maps ()))
     (dolist (line lines)
       (cond
-       ;; Expand seed ranges into individual numbers.
        ((string-match "^seeds: \\([0-9 ]+\\)$" line)
-        (let* ((range-pairs (mapcar 'string-to-number (split-string (match-string 1 line) " ")))
-               (expanded-seeds (expand-seed-ranges range-pairs)))
-          (push (cons 'seeds expanded-seeds) maps)))
+        (let* ((range-pairs (mapcar 'string-to-number (split-string (match-string 1 line) " "))))
+          (push (cons 'seeds range-pairs) maps)))
 
        ;; Update the current map identifier when a new map is encountered, with a symbol.
        ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)
@@ -78,6 +76,7 @@
        ;; Ignore lines that don't match the expected patterns.
        (t nil)))
     maps))
+
 
 (defun expand-seed-ranges (pairs)
   "Expand the pairs of seed range start and length into individual seeds."
@@ -166,10 +165,21 @@
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed maps)) seeds))))
 
+(defun lowest-location-ranges (maps)
+  "Find the lowest location for the initial seed ranges."
+  (let ((seed-ranges (cdr (assoc 'seeds maps)))
+        (locations '()))
+    (while seed-ranges
+      (let ((start (pop seed-ranges))
+            (length (pop seed-ranges)))
+        (let ((end (- (+ start length) 1)))
+          (dotimes (i length)
+            (push (find-location (+ start i) maps) locations)))))
+    (apply 'min locations)))
 
 (ert-deftest day-05-tests ()
   (should (= (lowest-location (day-05-test-data 'parse-input-values))  35))
-  (should (= (lowest-location (day-05-test-data 'parse-input-ranges))  46)))
+  (should (= (lowest-location-ranges (day-05-test-data 'parse-input-ranges))  46)))
 
 (defun day-05-part-01 (lines)
   "Day 5, Part 1."
@@ -177,7 +187,7 @@
 
 (defun day-05-part-02 (lines)
   "Day 5, Part 2."
-  (lowest-location (parse-input-ranges lines)))
+  (lowest-location-ranges (parse-input-ranges lines)))
 
 
 (let ((lines (read-lines day-05-input-file)))
