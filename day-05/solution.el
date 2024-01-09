@@ -56,26 +56,17 @@
        ((string-match "^seeds: \\([0-9 ]+\\)$" line)
         (let* ((range-pairs (mapcar 'string-to-number (split-string (match-string 1 line) " "))))
           (push (cons 'seeds range-pairs) maps)))
-
-       ;; Update the current map identifier when a new map is encountered, with a symbol.
        ((string-match "^\\(\\w+\\)-to-\\(\\w+\\) map:$" line)
         (setq current-map (intern (concat (match-string 1 line) "-to-" (match-string 2 line)))))
-
-       ;; Update mapping for the current map type.
        ((string-match "^\\([0-9]+\\) \\([0-9]+\\) \\([0-9]+\\)$" line)
         (let* ((dest-start (string-to-number (match-string 1 line)))
                (src-start (string-to-number (match-string 2 line)))
                (length (string-to-number (match-string 3 line)))
                (existing-maps (assoc current-map maps)))
           (if existing-maps
-              ;; Prepend the new range to the existing ranges.
               (push (list dest-start src-start length) (cdr existing-maps))
-            ;; Else, create a new mapping entry.
-            (push (cons current-map (list (list dest-start src-start length))) maps))))
-
-       ;; Ignore lines that don't match the expected patterns.
-       (t nil)))
-    maps))
+            (push (cons current-map (list (list dest-start src-start length))) maps))))))
+    (reverse maps)))
 
 
 (defun expand-seed-ranges (pairs)
@@ -165,21 +156,52 @@
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed maps)) seeds))))
 
-(defun lowest-location-ranges (maps)
+
+(defun remap-range (start end mappings)
+  "Remap the range from start to end based on mappings."
+  (let ((new-seeds '()))
+    (dolist (mapping mappings)
+      (let* ((destination-range-start (nth 0 mapping))
+             (source-range-start (nth 1 mapping))
+             (range-length (nth 2 mapping))
+             (overlap-start (max start source-range-start))
+             (overlap-end (min end (+ source-range-start range-length))))
+        (when (< overlap-start overlap-end)
+          ;; Add the remapped range to new-seeds
+          (push (cons (+ destination-range-start (- overlap-start source-range-start))
+                      (+ destination-range-start (- overlap-end source-range-start)))
+                new-seeds)
+          ;; Handle the case where the current range extends before the overlap
+          (when (< start overlap-start)
+            (push (cons start overlap-start) new-seeds))
+          ;; Handle the case where the current range extends after the overlap
+          (when (< overlap-end end)
+            (push (cons overlap-end end) new-seeds)))))
+    new-seeds))
+
+
+(defun lowest-location-ranges (parsed-data)
   "Find the lowest location for the initial seed ranges."
-  (let ((seed-ranges (cdr (assoc 'seeds maps)))
-        (locations '()))
-    (while seed-ranges
-      (let ((start (pop seed-ranges))
-            (length (pop seed-ranges)))
-        (let ((end (- (+ start length) 1)))
-          (dotimes (i length)
-            (push (find-location (+ start i) maps) locations)))))
-    (apply 'min locations)))
+  (let* ((seeds (cdr (assoc 'seeds parsed-data)))
+         ;; Convert seeds into pairs of start and end points.
+         (seed-ranges (cl-loop for (start length) on seeds by 'cddr
+                               collect (cons start (+ start length -1))))
+         (maps (cl-remove-if #'(lambda (item) (eq (car item) 'seeds)) parsed-data))
+         (min-location nil))
+    (dolist (m maps)
+      (let ((new-seeds '()))
+        (dolist (range seed-ranges)
+          (let ((start (car range))
+                (end (cdr range)))
+            (setq new-seeds (append new-seeds (remap-range start end (cdr m))))))
+        (setq seed-ranges new-seeds))
+      (when seed-ranges
+        (setq min-location (apply 'min (mapcar 'car seed-ranges)))))
+    min-location))
 
 (ert-deftest day-05-tests ()
-  (should (= (lowest-location (day-05-test-data 'parse-input-values))  35))
-  (should (= (lowest-location-ranges (day-05-test-data 'parse-input-ranges))  46)))
+  (should (= (lowest-location (day-05-test-data 'parse-input-values)) 35))
+  (should (= (lowest-location-ranges (day-05-test-data 'parse-input-ranges)) 46)))
 
 (defun day-05-part-01 (lines)
   "Day 5, Part 1."
@@ -188,7 +210,6 @@
 (defun day-05-part-02 (lines)
   "Day 5, Part 2."
   (lowest-location-ranges (parse-input-ranges lines)))
-
 
 (let ((lines (read-lines day-05-input-file)))
   (display-results (list (day-05-part-01 lines)
