@@ -22,9 +22,10 @@
 ;; Although this is mentioned in Part 1, we are to assume it also applies in Part 2!
 ;; This is important because we can short-circuit as soon as a seed-range partially overlaps
 ;; any candidate map for seed-to-soil, and so on.
-(defun remap (start end range-to-translate m) ; initially range-to-translate is seeds
+(defun remap (start end range-to-translate mappings) ; initially range-to-translate is seeds
+  "Remap a source range to a destination range for a specific set of mappings"
   (catch 'break
-    (dolist (mapping m) ; each map-type has many mappings loop over them
+    (dolist (mapping mappings) ; each map-type has many mappings, loop over them
       (let* ((destination-range-start (nth 0 mapping))
              (source-range-start (nth 1 mapping))
              (range-length (nth 2 mapping))
@@ -46,14 +47,14 @@
   range-to-translate)
 
 
-(dolist (maps map-types inputs) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
+(dolist (maps map-types) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
   (let ((translated-range '()))  ; Initialize the next map as an empty list for each map
     (while inputs
-      (let* ((pair (pop inputs))
+      (let* ((pair (pop inputs)) ; pop each input range and remap it to the next map-type destination range!
              (start (car pair))
              (end (cdr pair)))
         (setq translated-range (remap start end translated-range maps))))
         (setq inputs translated-range)))
 
-(let ((min-car (apply 'min (mapcar 'car inputs))))
-  (message "Minimum location: %d" min-car))
+(let ((min-lower-bound (apply 'min (mapcar 'car inputs))))
+  (message "Minimum location: %d" min-lower-bound))
