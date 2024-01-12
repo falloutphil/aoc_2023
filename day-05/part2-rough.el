@@ -22,7 +22,7 @@
 ;; Although this is mentioned in Part 1, we are to assume it also applies in Part 2!
 ;; This is important because we can short-circuit as soon as a seed-range partially overlaps
 ;; any candidate map for seed-to-soil, and so on.
-(defun remap (start end new-seeds m)
+(defun remap (start end range-to-translate m) ; initially range-to-translate is seeds
   (catch 'break
     (dolist (mapping m) ; each map-type has many mappings loop over them
       (let* ((destination-range-start (nth 0 mapping))
@@ -33,26 +33,28 @@
         (when (< overlap-start overlap-end) ; when there is some overlap
           (push (cons (+ destination-range-start (- overlap-start source-range-start))
                       (+ destination-range-start (- overlap-end source-range-start)))
-                new-seeds)      ; append the destination range to cover the overlap of seeds and source-range
+                range-to-translate)      ; append the destination range to cover the overlap of seeds and source-range
           ;; then any unmapped seed sub-ranges either side of overlapping ranges
           ;; we pass-through the original range (see comment above)
           (when (< start overlap-start)
-            (push (cons start overlap-start) new-seeds))
+            (push (cons start overlap-start) range-to-translate))
           (when (< overlap-end end)
-            (push (cons overlap-end end) new-seeds))
+            (push (cons overlap-end end) range-to-translate))
 	  ;; early exit - we only map the first matching source range
           (throw 'break nil))))
-    (push (cons start end) new-seeds))
-  new-seeds)
+    (push (cons start end) range-to-translate))
+  range-to-translate)
+
 
 (dolist (maps map-types inputs) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
-  (setq translated-range '())  ; Initialize new-seeds as an empty list for each map
-  (while inputs
-    (let ((pair (pop inputs)))
-      (setq start (car pair))
-      (setq end (cdr pair))
-      (setq translated-range (remap start end new-seeds maps))))
-  (setq inputs translated-range))
+  (let ((translated-range '()))  ; Initialize new-seeds as an empty list for each map
+    (while inputs
+      (let ((pair (pop inputs)))
+        (setq start (car pair))
+        (setq end (cdr pair))
+        (setq translated-range (remap start end translated-range maps))))
+    (setq inputs translated-range)))
+
 
 (let ((min-car (apply 'min (mapcar 'car inputs))))
   (message "Minimum location: %d" min-car))
