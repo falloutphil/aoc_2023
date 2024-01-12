@@ -47,14 +47,13 @@
 
 
 (dolist (maps map-types inputs) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
-  (let ((translated-range '()))  ; Initialize new-seeds as an empty list for each map
+  (let ((translated-range '()))  ; Initialize the next map as an empty list for each map
     (while inputs
-      (let ((pair (pop inputs)))
-        (setq start (car pair))
-        (setq end (cdr pair))
+      (let* ((pair (pop inputs))
+             (start (car pair))
+             (end (cdr pair)))
         (setq translated-range (remap start end translated-range maps))))
-    (setq inputs translated-range)))
-
+        (setq inputs translated-range)))
 
 (let ((min-car (apply 'min (mapcar 'car inputs))))
   (message "Minimum location: %d" min-car))
