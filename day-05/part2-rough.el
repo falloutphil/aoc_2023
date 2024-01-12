@@ -1,7 +1,10 @@
 
-(setq seeds '((79 . 93) (55 . 68)))
+;; this is the seeds but is updated to
+;; represent seed, soil, ....., and finally location
+(setq inputs '((79 . 93) (55 . 68)))
 
-(setq maps '(((50 98 2) (52 50 48))
+;;
+(setq map-types '(((50 98 2) (52 50 48))
             ((0 15 37) (37 52 2) (39 0 15))
             ((49 53 8) (0 11 42) (42 0 7) (57 7 4))
             ((88 18 7) (18 25 70))
@@ -30,28 +33,26 @@
         (when (< overlap-start overlap-end) ; when there is some overlap
           (push (cons (+ destination-range-start (- overlap-start source-range-start))
                       (+ destination-range-start (- overlap-end source-range-start)))
-                new-seeds)
+                new-seeds)      ; append the destination range to cover the overlap of seeds and source-range
+          ;; then any unmapped seed sub-ranges either side of overlapping ranges
+          ;; we pass-through the original range (see comment above)
           (when (< start overlap-start)
             (push (cons start overlap-start) new-seeds))
           (when (< overlap-end end)
             (push (cons overlap-end end) new-seeds))
-	  ;; early exit - big assumption - once we've found an overlapping map we assume there are no others for our seed range
-	  ;; So any non-overlapping segments retain their original values rather than assuming they could overlap elsewhere!
+	  ;; early exit - we only map the first matching source range
           (throw 'break nil))))
     (push (cons start end) new-seeds))
   new-seeds)
 
-(dolist (m maps seeds) ; loop over each map-type in sequence - order is important!
-  ;;(message "Start Seeds: %s" seeds)
-  ;;(message "Map: %s" m)
-  (setq new-seeds '())  ; Initialize new-seeds as an empty list for each map
-  (while seeds
-    (let ((pair (pop seeds)))
+(dolist (maps map-types inputs) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
+  (setq translated-range '())  ; Initialize new-seeds as an empty list for each map
+  (while inputs
+    (let ((pair (pop inputs)))
       (setq start (car pair))
       (setq end (cdr pair))
-      (setq new-seeds (remap start end new-seeds m))))
-  ;;(message "New Seeds: %s" new-seeds)
-  (setq seeds new-seeds))
+      (setq translated-range (remap start end new-seeds maps))))
+  (setq inputs translated-range))
 
-(let ((min-car (apply 'min (mapcar 'car seeds))))
+(let ((min-car (apply 'min (mapcar 'car inputs))))
   (message "Minimum location: %d" min-car))
