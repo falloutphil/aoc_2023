@@ -110,18 +110,8 @@
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed remaining-maps)) seeds))))
 
-;; NOTE: Non-overlapping sub-ranges of a given seed range retain their original values,
-;; rather than assuming they could overlap a different map candidate.
-;; If we get a partial match, i.e. some of our seed range overlaps with only some of the source transformation -
-;; we map to the overlapped inputs destination, but for the unmapped seeds we carry them over as-is,
-;; with no transformation into the destination, rather than search other candidate maps.
-;; This isn't massively clear from the puzzle text but we have the quote:
-;; "Any source numbers that aren't mapped correspond to the same destination number."
-;; Although this is mentioned in Part 1, we are to assume it also applies in Part 2!
-;; This is important because we can short-circuit as soon as a seed-range partially overlaps
-;; any candidate map for seed-to-soil, and so on.
 (defun remap (start end remaining-inputs range-to-translate mappings) ; initially range-to-translate is seeds
-  "Remap a source range to a destination range for a specific set of mappings"
+  "Partially remap start-end input range to a destination range for a specific set of mappings"
   (catch 'break
     (dolist (mapping mappings) ; each map-type has many mappings, loop over them
       (let* ((destination-range-start (nth 0 mapping))
@@ -130,26 +120,26 @@
              (overlap-start (max start source-range-start))
              (overlap-end (min end (+ source-range-start range-length))))
         (when (< overlap-start overlap-end) ; when there is some overlap
-          ;; push in reverse order because we prepend:
-          ;; ((s-overlap e-overlap) (start s-overlap) (e-overlap end))
+          ;; translate and prepend the overlap range
+          (push (cons (+ destination-range-start (- overlap-start source-range-start)) ; start point in destination range
+                      (+ destination-range-start (- overlap-end source-range-start))) ; end point in destination range
+                range-to-translate) ; append the translated range in the queue for the next map-type
 
-          ;; any unmapped seed sub-ranges either side of overlapping ranges
-          ;; we pass-through the original range (see comment above)
+          ;; any unmapped input sub-ranges either side of overlapping ranges
+          ;; get placed back into the remaining input ranges in case a further map
+          ;; in this map-type can handle it with a subsequent call to remap
           (when (< overlap-end end)
             (push (cons overlap-end end) remaining-inputs))
-
           (when (< start overlap-start)
             (push (cons start overlap-start) remaining-inputs))
 
-          ;; now last we prepend the overlap range
-          (push (cons (+ destination-range-start (- overlap-start source-range-start))
-                      (+ destination-range-start (- overlap-end source-range-start)))
-                range-to-translate)      ; append the destination range to cover the overlap of seeds and source-range
-
 	  ;; early exit - we only map the first matching source range
           (throw 'break nil))))
-    ;; if you get to the end of the dolist without throwing, add the untranslated range
+    ;; if you get to the end of the dolist without throwing, there is nothing else
+    ;; we can do in this map-type so we carry the untranslated range
+    ;; forward to the next map-type
     (push (cons start end) range-to-translate))
+  ;; return both the remaining and translated lists
   (cons remaining-inputs range-to-translate))
 
 
@@ -157,9 +147,8 @@
   "Find the lowest location for the initial seed ranges."
   (let* ((seeds (cdr (assoc 'seeds parsed-data)))
          (inputs (cl-loop for (start length) on seeds by 'cddr ; jump by cddr - windows of 2 elements
-                          collect (cons start (+ start length))))
+                          collect (cons start (+ start length)))) ; collect results translating length to (upper . lower)
          (map-types (mapcar 'cdr (cdr parsed-data))))
-    ;;(breakpoint)
     (dolist (maps map-types) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
       (let ((translated-range '()))  ; Initialize the next map as an empty list for each map
         (while inputs
