@@ -130,17 +130,25 @@
              (overlap-start (max start source-range-start))
              (overlap-end (min end (+ source-range-start range-length))))
         (when (< overlap-start overlap-end) ; when there is some overlap
+          ;; push in reverse order because we prepend:
+          ;; ((s-overlap e-overlap) (start s-overlap) (e-overlap end))
+
+          ;; any unmapped seed sub-ranges either side of overlapping ranges
+          ;; we pass-through the original range (see comment above)
+          (when (< overlap-end end)
+            (push (cons overlap-end end) range-to-translate))
+
+          (when (< start overlap-start)
+            (push (cons start overlap-start) range-to-translate))
+
+          ;; now last we prepend the overlap range
           (push (cons (+ destination-range-start (- overlap-start source-range-start))
                       (+ destination-range-start (- overlap-end source-range-start)))
                 range-to-translate)      ; append the destination range to cover the overlap of seeds and source-range
-          ;; then any unmapped seed sub-ranges either side of overlapping ranges
-          ;; we pass-through the original range (see comment above)
-          (when (< start overlap-start)
-            (push (cons start overlap-start) range-to-translate))
-          (when (< overlap-end end)
-            (push (cons overlap-end end) range-to-translate))
+
 	  ;; early exit - we only map the first matching source range
           (throw 'break nil))))
+    ;; if you get to the end of the dolist without throwing, add the untranslated range
     (push (cons start end) range-to-translate))
   range-to-translate)
 
@@ -158,9 +166,12 @@
           (let* ((pair (pop inputs)) ; pop each input range and remap it to the next map-type destination range!
                  (start (car pair))
                  (end (cdr pair)))
-            (setq translated-range (remap start end translated-range maps))))
+            (setq translated-range (remap start end translated-range maps))
+            ;(message "tr: %s" translated-range)
+            ))
+        (message "Final translated-range: %s" translated-range)
         (setq inputs translated-range)))
-    (message "FINAL: %s" inputs)
+    (message "Final inputs: %s" inputs)
     (apply 'min (mapcar 'car inputs))))
 
 
