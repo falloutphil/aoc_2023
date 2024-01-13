@@ -152,7 +152,7 @@
   (let* ((seeds (cdr (assoc 'seeds parsed-data)))
          (inputs (cl-loop for (start length) on seeds by 'cddr ; jump by cddr - windows of 2 elements
                           collect (cons start (+ start length)))) ; collect results translating length to (upper . lower)
-         (map-types (mapcar 'cdr (cdr parsed-data))))
+         (map-types (mapcar 'cdr (cdr parsed-data)))) ; filter out seeds, then remove keys from to give lists of mappings
     (dolist (maps map-types) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
       (let ((translated-ranges '()))  ; Initialize the results for this map-type
         (while inputs
