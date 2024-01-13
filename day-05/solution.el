@@ -37,8 +37,8 @@
                (length (string-to-number (match-string 3 line)))
                (existing-maps (assoc current-map maps)))
           (if existing-maps
-              ;; Append the new range to the existing ranges.
-              (nconc (cdr existing-maps) (list (list dest-start src-start length)))
+              ;; Prepend the new range to the existing ranges.
+              (push (list dest-start src-start length) (cdr existing-maps))
             ;; Else, create a new mapping entry.
             (push (cons current-map (list (list dest-start src-start length))) maps))))
 
@@ -110,8 +110,8 @@
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed remaining-maps)) seeds))))
 
-(defun remap (start end remaining-inputs range-to-translate mappings) ; initially range-to-translate is seeds
-  "Partially remap start-end input range to a destination range for a specific set of mappings"
+(defun remap (start end remaining-inputs translated-ranges mappings) ; initially start end will be a seed range
+  "Partially remap start-end input range to a destination range for a specific set of mappings for a single map-type"
   (catch 'break
     (dolist (mapping mappings) ; each map-type has many mappings, loop over them
       (let* ((destination-range-start (nth 0 mapping))
@@ -123,7 +123,7 @@
           ;; translate and prepend the overlap range
           (push (cons (+ destination-range-start (- overlap-start source-range-start)) ; start point in destination range
                       (+ destination-range-start (- overlap-end source-range-start))) ; end point in destination range
-                range-to-translate) ; append the translated range in the queue for the next map-type
+                translated-ranges) ; append the translated range in the queue for the next map-type
 
           ;; any unmapped input sub-ranges either side of overlapping ranges
           ;; get placed back into the remaining input ranges in case a further map
@@ -138,9 +138,9 @@
     ;; if you get to the end of the dolist without throwing, there is nothing else
     ;; we can do in this map-type so we carry the untranslated range
     ;; forward to the next map-type
-    (push (cons start end) range-to-translate))
+    (push (cons start end) translated-ranges))
   ;; return both the remaining and translated lists
-  (cons remaining-inputs range-to-translate))
+  (cons remaining-inputs translated-ranges))
 
 
 (defun lowest-location-ranges (parsed-data)
