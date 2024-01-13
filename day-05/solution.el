@@ -120,7 +120,7 @@
 ;; Although this is mentioned in Part 1, we are to assume it also applies in Part 2!
 ;; This is important because we can short-circuit as soon as a seed-range partially overlaps
 ;; any candidate map for seed-to-soil, and so on.
-(defun remap (start end range-to-translate mappings) ; initially range-to-translate is seeds
+(defun remap (start end remaining-inputs range-to-translate mappings) ; initially range-to-translate is seeds
   "Remap a source range to a destination range for a specific set of mappings"
   (catch 'break
     (dolist (mapping mappings) ; each map-type has many mappings, loop over them
@@ -136,10 +136,10 @@
           ;; any unmapped seed sub-ranges either side of overlapping ranges
           ;; we pass-through the original range (see comment above)
           (when (< overlap-end end)
-            (push (cons overlap-end end) range-to-translate))
+            (push (cons overlap-end end) remaining-inputs))
 
           (when (< start overlap-start)
-            (push (cons start overlap-start) range-to-translate))
+            (push (cons start overlap-start) remaining-inputs))
 
           ;; now last we prepend the overlap range
           (push (cons (+ destination-range-start (- overlap-start source-range-start))
@@ -150,7 +150,7 @@
           (throw 'break nil))))
     ;; if you get to the end of the dolist without throwing, add the untranslated range
     (push (cons start end) range-to-translate))
-  range-to-translate)
+  (cons remaining-inputs range-to-translate))
 
 
 (defun lowest-location-ranges (parsed-data)
@@ -165,8 +165,10 @@
         (while inputs
           (let* ((pair (pop inputs)) ; pop each input range and remap it to the next map-type destination range!
                  (start (car pair))
-                 (end (cdr pair)))
-            (setq translated-range (remap start end translated-range maps))
+                 (end (cdr pair))
+                 (results (remap start end inputs translated-range maps)))
+            (setq inputs (car results)
+                  translated-range (cdr results))
             ;(message "tr: %s" translated-range)
             ))
         (message "Final translated-range: %s" translated-range)
