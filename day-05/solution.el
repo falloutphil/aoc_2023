@@ -110,8 +110,12 @@
     ;; For each seed in our map, find all the locations and then the min
     (apply 'min (mapcar (lambda (seed) (find-location seed remaining-maps)) seeds))))
 
-(defun remap (start end remaining-inputs translated-ranges mappings) ; initially start end will be a seed range
+(defun remap (remaining-inputs translated-ranges mappings) ; initially start end will be a seed range
   "Partially remap start-end input range to a destination range for a specific set of mappings for a single map-type"
+  (let* ((next-range (pop remaining-inputs)) ; pop each input range and remap it if possible
+         (start (car next-range))
+         (end (cdr next-range)))
+
   (catch 'break
     (dolist (mapping mappings) ; each map-type has many mappings, loop over them
       (let* ((destination-range-start (nth 0 mapping))
@@ -138,7 +142,7 @@
     ;; if you get to the end of the dolist without throwing, there is nothing else
     ;; we can do in this map-type so we carry the untranslated range
     ;; forward to the next map-type
-    (push (cons start end) translated-ranges))
+    (push (cons start end) translated-ranges)))
   ;; return both the remaining and translated lists
   (cons remaining-inputs translated-ranges))
 
@@ -152,17 +156,12 @@
     (dolist (maps map-types) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
       (let ((translated-range '()))  ; Initialize the next map as an empty list for each map
         (while inputs
-          (let* ((pair (pop inputs)) ; pop each input range and remap it to the next map-type destination range!
-                 (start (car pair))
-                 (end (cdr pair))
-                 (results (remap start end inputs translated-range maps)))
+          (let ((results (remap inputs translated-range maps)))
             (setq inputs (car results)
-                  translated-range (cdr results))
-            ;(message "tr: %s" translated-range)
-            ))
-        (message "Final translated-range: %s" translated-range)
+                  translated-range (cdr results))))
+        ;;(message "Final translated-range: %s" translated-range)
         (setq inputs translated-range)))
-    (message "Final inputs: %s" inputs)
+    ;;(message "Final inputs: %s" inputs)
     (apply 'min (mapcar 'car inputs))))
 
 
