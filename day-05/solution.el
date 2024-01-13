@@ -112,9 +112,9 @@
 
 (defun remap (remaining-inputs translated-ranges mappings) ; initially start end will be a seed range
   "Partially remap start-end input range to a destination range for a specific set of mappings for a single map-type"
-  (let* ((next-range (pop remaining-inputs)) ; pop each input range and remap it if possible
-         (start (car next-range))
-         (end (cdr next-range)))
+  (let* ((input-range (pop remaining-inputs)) ; pop each input range and remap it if possible
+         (start (car input-range))
+         (end (cdr input-range)))
 
   (catch 'break
     (dolist (mapping mappings) ; each map-type has many mappings, loop over them
@@ -142,7 +142,7 @@
     ;; if you get to the end of the dolist without throwing, there is nothing else
     ;; we can do in this map-type so we carry the untranslated range
     ;; forward to the next map-type
-    (push (cons start end) translated-ranges)))
+    (push input-range translated-ranges)))
   ;; return both the remaining and translated lists
   (cons remaining-inputs translated-ranges))
 
@@ -154,13 +154,13 @@
                           collect (cons start (+ start length)))) ; collect results translating length to (upper . lower)
          (map-types (mapcar 'cdr (cdr parsed-data))))
     (dolist (maps map-types) ; loop over each map-type (eg seed-to-soil) in sequence - order is important!
-      (let ((translated-range '()))  ; Initialize the next map as an empty list for each map
+      (let ((translated-ranges '()))  ; Initialize the results for this map-type
         (while inputs
-          (let ((results (remap inputs translated-range maps)))
+          (let ((results (remap inputs translated-ranges maps)))
             (setq inputs (car results)
-                  translated-range (cdr results))))
+                  translated-ranges (cdr results))))
         ;;(message "Final translated-range: %s" translated-range)
-        (setq inputs translated-range)))
+        (setq inputs translated-ranges)))       ; take translated ranges and run through the next map-type
     ;;(message "Final inputs: %s" inputs)
     (apply 'min (mapcar 'car inputs))))
 
